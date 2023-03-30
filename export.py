@@ -674,6 +674,7 @@ def run(
         topk_all=100,  # TF.js NMS: topk for all classes to keep
         iou_thres=0.45,  # TF.js NMS: IoU threshold
         conf_thres=0.25,  # TF.js NMS: confidence threshold
+        export_snapml=False,
 ):
     t = time.time()
     include = [x.lower() for x in include]  # to lowercase
@@ -707,12 +708,17 @@ def run(
             m.inplace = inplace
             m.dynamic = dynamic
             m.export = True
+            m.export_snapml = export_snapml
 
     for _ in range(2):
         y = model(im)  # dry runs
     if half and not coreml:
         im, model = im.half(), model.half()  # to FP16
-    shape = tuple((y[0] if isinstance(y, tuple) else y).shape)  # model output shape
+
+    if export_snapml:
+        shape = "unknown"
+    else:
+        shape = tuple((y[0] if isinstance(y, tuple) else y).shape)  # model output shape
     metadata = {'stride': int(max(model.stride)), 'names': model.names}  # model metadata
     LOGGER.info(f"\n{colorstr('PyTorch:')} starting from {file} with output shape {shape} ({file_size(file):.1f} MB)")
 
@@ -798,6 +804,7 @@ def parse_opt(known=False):
     parser.add_argument('--topk-all', type=int, default=100, help='TF.js NMS: topk for all classes to keep')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='TF.js NMS: IoU threshold')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='TF.js NMS: confidence threshold')
+    parser.add_argument('--export-snapml', action='store_true', help='Export SnapML compatible model')
     parser.add_argument(
         '--include',
         nargs='+',
